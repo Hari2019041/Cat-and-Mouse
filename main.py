@@ -22,17 +22,17 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 200, 255)
 
-def setWindow(TITLE, ICON):
+def set_window(TITLE, ICON):
     pygame.display.set_caption(TITLE)
     pygame.display.set_icon(ICON)
 
 
 class Mouse:
-    def __init__(self, x, y, color=GRAY):
+    def __init__(self, x=WIDTH//2, y=HEIGHT//2, color=GRAY):
         self.x = x
         self.y = y
         self.position = (self.x, self.y)
-        self.speed = 4
+        self.speed = 1
         self.color = color
         self.size = 2
 
@@ -47,26 +47,27 @@ class Mouse:
 class Cat:
     def __init__(self, x=WIDTH//2, y=MARGIN, color=BLACK):
         self.size = 10
-        self.speed = 1
+        self.speed = 4
         self.center = (WIDTH//2, HEIGHT//2)
         self.angular_position = math.pi/2
-        self.radius = HEIGHT//2 - MARGIN
+        self.radius = HEIGHT//2 - MARGIN + self.size
         self.omega = self.speed/self.radius
         self.x = self.center[0] + self.radius*math.cos(self.angular_position)
         self.y = self.center[1] - self.radius*math.sin(self.angular_position)
         self.position = (self.x, self.y)
         self.color = color
 
+    def update_pos(self):
+        self.x = self.center[0] + self.radius*math.cos(self.angular_position)
+        self.y = self.center[1] - self.radius*math.sin(self.angular_position)
+        self.position = (self.x, self.y)
+
     def show(self):
         pygame.draw.circle(SCREEN, self.color, self.position, self.size, self.size)
 
     def rotate(self, direction):
-        if direction == "Clockwise":
-            self.angular_position += self.omega
-            self.x += self.radius*math.cos(math.pi/2+ self.angular_position)
-            self.y -= self.radius*math.sin(math.pi/2+ self.angular_position)
-
-        self.position = (self.x, self.y)
+        self.angular_position += -self.omega if direction=="C" else self.omega
+        self.update_pos()
 
 class Pond:
     def __init__(self, color=BLUE):
@@ -84,12 +85,12 @@ class Simulation:
     def __init__(self):
         self.RUNNING = True
         self.clock = pygame.time.Clock()
-        self.FPS = 60
+        self.FPS = 24
         self.pond = Pond()
-        self.mouse = Mouse(WIDTH//2, HEIGHT//2)
+        self.mouse = Mouse()
         self.cat = Cat()
 
-    def startSimulation(self):
+    def start_simulation(self):
         while self.RUNNING:
             self.clock.tick(self.FPS)
             SCREEN.fill(WHITE)
@@ -98,14 +99,15 @@ class Simulation:
             self.pond.show()
             self.mouse.show()
             self.cat.show()
-            self.cat.rotate("Clockwise")
-            self.mouse.translate(-math.pi/3)
+            self.cat.rotate("C")
+            self.mouse.translate(0)
             pygame.display.update()
 
 
 def main():
+    set_window(TITLE, ICON)
     simulation = Simulation()
-    simulation.startSimulation()
+    simulation.start_simulation()
 
 if __name__ == '__main__':
     main()
