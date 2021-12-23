@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import time
 
 pygame.init()
 pygame.font.init()
@@ -26,6 +27,8 @@ def set_window(TITLE, ICON):
     pygame.display.set_caption(TITLE)
     pygame.display.set_icon(ICON)
 
+def distance(p1, p2):
+    return ((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)**0.5
 
 class Mouse:
     def __init__(self, x=WIDTH//2, y=HEIGHT//2, color=GRAY):
@@ -35,6 +38,7 @@ class Mouse:
         self.speed = 1
         self.color = color
         self.size = 2
+        self.angle = 0
 
     def show(self):
         pygame.draw.circle(SCREEN, self.color, self.position, self.size, self.size)
@@ -43,6 +47,19 @@ class Mouse:
         self.x += self.speed*math.cos(angle)
         self.y -= self.speed*math.sin(angle)
         self.position = (self.x, self.y)
+
+    def dash_tactic(self, pond):
+        center = pond.center
+        dis = distance(self.position, center)
+        if dis != 0:
+            angle = math.asin(abs((center[1]-self.y)/dis))
+            if self.x > center[0]:
+                angle *= -1 if self.y > center[1] else 1
+            else:
+                angle = math.pi - angle if self.y < center[1] else angle + math.pi
+        else:
+            angle = 0
+        self.translate(angle)
 
 class Cat:
     def __init__(self, x=WIDTH//2, y=MARGIN, color=BLACK):
@@ -87,7 +104,7 @@ class Simulation:
         self.clock = pygame.time.Clock()
         self.FPS = 24
         self.pond = Pond()
-        self.mouse = Mouse()
+        self.mouse = Mouse(150, 150)
         self.cat = Cat()
 
     def start_simulation(self):
@@ -97,11 +114,15 @@ class Simulation:
             for event in pygame.event.get():
                 self.RUNNING = False if event.type == pygame.QUIT else True
             self.pond.show()
+            pygame.draw.circle(SCREEN, WHITE, (WIDTH//2, HEIGHT//2), 1, 1)
             self.mouse.show()
             self.cat.show()
+            self.mouse.dash_tactic(self.pond)
             self.cat.rotate("C")
-            self.mouse.translate(0)
+            # self.mouse.translate(-math.pi/4)
+            pygame.draw.line(SCREEN, WHITE, self.pond.center, self.mouse.position)
             pygame.display.update()
+
 
 
 def main():
