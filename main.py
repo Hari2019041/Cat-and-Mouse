@@ -14,6 +14,8 @@ MARGIN = 50
 TITLE = "Cat and Mouse"
 ICON = pygame.image.load('icon.png')
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+CENTER = (WIDTH//2, HEIGHT//2)
+RADIUS = HEIGHT//2 - MARGIN
 
 # Colors
 BLACK = (0, 0, 0)
@@ -35,37 +37,43 @@ class Mouse:
         self.x = x
         self.y = y
         self.position = (self.x, self.y)
+        self.angular_position = self.calculate_angle()
         self.speed = 1
         self.color = color
         self.size = 2
         self.angle = 0
 
+    def calculate_angle(self):
+        dis = distance(self.position, CENTER)
+        if dis != 0:
+            angle = math.asin(abs((CENTER[1]-self.y)/dis))
+            if self.x > CENTER[0]:
+                angle *= -1 if self.y > CENTER[1] else 1
+            else:
+                angle = math.pi - angle if self.y < CENTER[1] else angle + math.pi
+        else:
+            angle = 0
+        return angle
+
     def show(self):
         pygame.draw.circle(SCREEN, self.color, self.position, self.size, self.size)
+
+    def rotate(self, radius, direction):
+        self.angular_position += -self.omega if direction=="C" else self.omega
+        self.update_pos()
 
     def translate(self, angle):
         self.x += self.speed*math.cos(angle)
         self.y -= self.speed*math.sin(angle)
         self.position = (self.x, self.y)
 
-    def dash_tactic(self, pond):
-        center = pond.center
-        dis = distance(self.position, center)
-        if dis != 0:
-            angle = math.asin(abs((center[1]-self.y)/dis))
-            if self.x > center[0]:
-                angle *= -1 if self.y > center[1] else 1
-            else:
-                angle = math.pi - angle if self.y < center[1] else angle + math.pi
-        else:
-            angle = 0
+    def dash_tactic(self):
+        angle = self.calculate_angle()
         self.translate(angle)
 
-    def away_tactic(self, pond, cat):
-        center = pond.center
-        radius = pond.radius
+    def away_tactic(self, cat):
         angular_position = cat.angular_position+math.pi
-        away_point = center[0] + radius*math.cos(angular_position), center[1] - radius*math.sin(angular_position)
+        away_point = CENTER[0] + RADIUS*math.cos(angular_position), CENTER[1] - RADIUS*math.sin(angular_position)
         pygame.draw.line(SCREEN, BLACK, cat.position, away_point)
         pygame.draw.line(SCREEN, BLACK, self.position, away_point)
 
@@ -74,7 +82,7 @@ class Mouse:
         if away_point[0] > self.x:
             angle *= -1 if away_point[1] > self.y else 1
         else:
-            angle = angle + math.pi if away_point[1] > self.y else math.pi - angle 
+            angle = angle + math.pi if away_point[1] > self.y else math.pi - angle
         self.translate(angle)
 
 class Cat:
@@ -118,7 +126,7 @@ class Simulation:
     def __init__(self):
         self.RUNNING = True
         self.clock = pygame.time.Clock()
-        self.FPS = 24
+        self.FPS = 60
         self.pond = Pond()
         self.mouse = Mouse(150, 150)
         self.cat = Cat()
@@ -133,8 +141,8 @@ class Simulation:
             pygame.draw.circle(SCREEN, WHITE, (WIDTH//2, HEIGHT//2), 1, 1)
             self.mouse.show()
             self.cat.show()
-            # self.mouse.dash_tactic(self.pond)
-            self.mouse.away_tactic(self.pond, self.cat)
+            self.mouse.dash_tactic()
+            # self.mouse.away_tactic(self.pond, self.cat)
             self.cat.rotate("C")
             # self.mouse.translate(-math.pi/4)
             # pygame.draw.line(SCREEN, WHITE, self.pond.center, self.mouse.position)
