@@ -61,6 +61,22 @@ class Mouse:
             angle = 0
         self.translate(angle)
 
+    def away_tactic(self, pond, cat):
+        center = pond.center
+        radius = pond.radius
+        angular_position = cat.angular_position+math.pi
+        away_point = center[0] + radius*math.cos(angular_position), center[1] - radius*math.sin(angular_position)
+        pygame.draw.line(SCREEN, BLACK, cat.position, away_point)
+        pygame.draw.line(SCREEN, BLACK, self.position, away_point)
+
+        dis = distance(away_point, self.position)
+        angle = math.asin(abs((away_point[1]-self.y)/dis))
+        if away_point[0] > self.x:
+            angle *= -1 if away_point[1] > self.y else 1
+        else:
+            angle = angle + math.pi if away_point[1] > self.y else math.pi - angle 
+        self.translate(angle)
+
 class Cat:
     def __init__(self, x=WIDTH//2, y=MARGIN, color=BLACK):
         self.size = 10
@@ -92,10 +108,10 @@ class Pond:
         self.y = HEIGHT//2
         self.center = (self.x, self.y)
         self.color = color
-        self.size = HEIGHT//2 - MARGIN
+        self.radius = HEIGHT//2 - MARGIN
 
     def show(self):
-        pygame.draw.circle(SCREEN, self.color, self.center, self.size, self.size)
+        pygame.draw.circle(SCREEN, self.color, self.center, self.radius, self.radius)
 
 
 class Simulation:
@@ -117,10 +133,11 @@ class Simulation:
             pygame.draw.circle(SCREEN, WHITE, (WIDTH//2, HEIGHT//2), 1, 1)
             self.mouse.show()
             self.cat.show()
-            self.mouse.dash_tactic(self.pond)
+            # self.mouse.dash_tactic(self.pond)
+            self.mouse.away_tactic(self.pond, self.cat)
             self.cat.rotate("C")
             # self.mouse.translate(-math.pi/4)
-            pygame.draw.line(SCREEN, WHITE, self.pond.center, self.mouse.position)
+            # pygame.draw.line(SCREEN, WHITE, self.pond.center, self.mouse.position)
             pygame.display.update()
 
 
