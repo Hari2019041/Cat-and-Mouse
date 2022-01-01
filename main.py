@@ -32,8 +32,8 @@ def set_window(TITLE, ICON):
 def distance(p1, p2):
     return ((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)**0.5
 
-def point_on_circle(angle):
-    return CENTER[0]+RADIUS*math.cos(angle), CENTER[1]-RADIUS*math.sin(angle)
+def point_on_circle(angle, radius=RADIUS):
+    return CENTER[0]+radius*math.cos(angle), CENTER[1]-radius*math.sin(angle)
 
 def calculate_angle(C, O=CENTER, A=point_on_circle(0)):
     OC = distance(O, C)
@@ -69,15 +69,14 @@ class Mouse:
     def show(self):
         pygame.draw.circle(SCREEN, self.color, self.position, self.size, self.size)
 
-    def update_pos(self):
-        self.x, self.y = point_on_circle(self.angular_position)
-        self.position = (self.x, self.y)
+    def update_pos(self, radius):
+        self.position = self.x, self.y = point_on_circle(self.angular_position, radius)
 
     def rotate(self, radius, direction):
         self.omega = self.speed/radius
         self.angular_position += -self.omega if direction=="C" else self.omega
         self.radius_of_rotation = radius
-        self.update_pos()
+        self.update_pos(radius)
 
     def translate(self, angle):
         self.x += self.speed*math.cos(angle)
@@ -109,8 +108,7 @@ class Cat:
         self.color = color
 
     def update_pos(self):
-        self.x, self.y = point_on_circle(self.angular_position)
-        self.position = (self.x, self.y)
+        self.position = self.x, self.y = point_on_circle(self.angular_position, self.radius)
 
     def show(self):
         pygame.draw.circle(SCREEN, self.color, self.position, self.size, self.size)
@@ -140,13 +138,23 @@ class Simulation:
     def __init__(self):
         self.RUNNING = True
         self.clock = pygame.time.Clock()
-        self.FPS = 60
+        self.FPS = 24
         self.pond = Pond()
         self.mouse = Mouse(300, 300)
         self.cat = Cat()
+        self.dash_boundary = (1-math.pi/4)*RADIUS
+        self.circling_boundary = RADIUS/4
+        self.mouse_in_position = False
+        self.cat_opposite_mouse = False
 
     def show_center(self):
-        pygame.draw.circle(SCREEN, WHITE, (WIDTH//2, HEIGHT//2), 1, 1)
+        pygame.draw.circle(SCREEN, WHITE, CENTER, 1, 1)
+
+    def show_circling_boundary(self):
+        pygame.draw.circle(SCREEN, GREEN, CENTER, self.circling_boundary, 1)
+
+    def show_dash_boundary(self):
+        pygame.draw.circle(SCREEN, RED, CENTER, self.dash_boundary, 1)
 
     def is_mouse_inside_pond(self):
         return distance(CENTER, self.mouse.position) <= RADIUS
@@ -154,9 +162,31 @@ class Simulation:
     def is_cat_catch_mouse(self):
         return distance(self.cat.position, self.mouse.position) <= self.mouse.size+self.cat.size
 
-    def dash_tactic(self):
+    def is_cat_opposite_mouse(self):
+        tangent_point, pos = create_tangent(self.cat.position)
+        angle = calculate_angle(O=CENTER, A=tangent_point, C=self.mouse.position)
+        return angle*180/math.pi > 179
+
+    def is_mouse_in_position(self):
+        return distance(CENTER, self.mouse.position) >= self.circling_boundary-2
+
+    def get_into_position(self):
         self.mouse.dash_tactic()
-        return not self.is_cat_catch_mouse() and self.is_mouse_inside_pond()
+
+    def circling_tactic(self, radius):
+        self.mouse.rotate(radius, "C")
+
+    def escape_tactic(self):
+        if self.mouse_in_position and self.cat_opposite_mouse:
+            return self.mouse.dash_tactic()
+        self.get_into_position()
+        if not self.is_mouse_in_position():
+            return
+        self.mouse_in_position = True
+        self.mouse.rotate(self.circling_boundary, "C")
+        if not self.is_cat_opposite_mouse():
+            return
+        self.cat_opposite_mouse = True
 
     def start_simulation(self):
         while self.RUNNING:
@@ -169,19 +199,11 @@ class Simulation:
             self.show_center()
             self.mouse.show()
             self.cat.show()
-            
-            dash_boundary = math.pi/4*RADIUS
-            circling_boundary = RADIUS/4
-            # print(boundary)
-            tangent_point, pos = create_tangent(self.cat.position)
-            angle = calculate_angle(O=CENTER, A=tangent_point, C=self.mouse.position)
-
-            # if distance(self.mouse.position, CENTER) >= RADIUS-dash_boundary:
-            self.RUNNING = self.dash_tactic()
-                # self.mouse.rotate(50, "C")
-            # self.mouse.away_tactic(self.cat)
-            # self.cat.rotate("C")
             self.cat.chase(self.mouse)
+            self.show_circling_boundary()
+            self.show_dash_boundary()
+
+            self.escape_tactic()
             pygame.draw.line(SCREEN, BLACK, self.pond.center, self.mouse.position)
             pygame.draw.line(SCREEN, BLACK, self.pond.center, self.cat.position)
             pygame.display.update()
